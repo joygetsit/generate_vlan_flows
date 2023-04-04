@@ -23,12 +23,8 @@ from scapy.utils import PcapWriter
 # from scapy.all import *
 import time
 
-dstmac = '00:00:00:00:00:00'  # '00:1b:21:c2:54:42'
-Interface = 'lo'  # 'enp1s0np0', 'enp1s0f0'
-vlanID_to_UDPdstport = {
-    '2': '3002',
-    '3': '3003'
-}
+dstmac = '00:1b:21:c2:54:42'
+Interface = 'enp1s0f0'
 
 # PcapFileName='VLAN_2_packets_Size_1000bytes_test2.pcap'
 
@@ -51,37 +47,34 @@ def get_if(interface):
     return iface
 
 
-def generate_flow(PacketLength, vlanID, UDPdstport, Priority):
+def make(PacketLength, VLAN_ID, Priority, UDPdstport, PcapFileName):
     iface = get_if(Interface)
-    PcapFileName = 'Traffic_Flow_vlan(' + str(vlanID) + \
-                   ')_packetsize(' + str(PacketLength) + 'B)_NoPriority_test8.pcap'
 
+    writetoPcap = PcapWriter(PcapFileName)  # opened file to write
     # PacketLength = 935 + 46 headers + 24 data = 1000 bytes
     payload_size = PacketLength - 73
     payload = ""
     while len(payload) < payload_size:
         payload += "test "
 
-    writetoPcap = PcapWriter(PcapFileName)  # opened file to write
-
-    for PacketIP_lastoctet in range(10, 11):
-        for PacketSequenceNo in range(20):
+    for PacketIP_lastoctet in range(10, 100):
+        for PacketSequenceNo in range(65536):
 
             # Content_data = sys.argv[2] + "; Packet Number " + str(pktnum + 1) + payload
             # Content_data = 'Packet Number ' + str(pktnum + 1) + ' ' + payload
             Packet_Content = 'Packet_Num_' + f'{PacketSequenceNo:012d}' + '_' + payload
-            IP_src = '100.1.10.' + str(PacketIP_lastoctet)
 
-            packet = Ether(src=get_if_hwaddr(iface), dst=dstmac) / Dot1Q(prio=Priority, vlan=int(vlanID)) / IP(
-                src=IP_src, id=PacketSequenceNo, proto=17) / UDP(sport=44444, dport=int(UDPdstport))
+            IP_src = '100.1.10.' + str(PacketIP_lastoctet)
+            Packet = Ether(src=get_if_hwaddr(iface), dst=dstmac) / Dot1Q(prio=Priority, vlan=VLAN_ID) / IP(
+                src=IP_src, id=PacketSequenceNo, proto=17) / UDP(sport=44444, dport=UDPdstport)
             # IP proto=253 (used for testing and experimentation, used in this code if UDP header is not used above)
             # Can append id to Source IP address field of IP header also #IP(src=pktsequencenumber)
-            packet = packet / Raw(load=Packet_Content)
+            Packet = Packet / Raw(load=Packet_Content)
             if (PacketSequenceNo in {0, 1}) and (PacketIP_lastoctet in {0, 1}):
-                packet.show2()
+                Packet.show2()
 
             # Write the packets to a pcap file, can be used with tcpreplay later
-            writetoPcap.write(packet)
+            writetoPcap.write(Packet)
 
 
 def main():
@@ -90,29 +83,34 @@ def main():
     # Change the vlan tag to generate desired vlan tagged packet
     # Change the udp destination port to generate desired udp packet
 
+    # PacketLength=1000
+
     ''' Create packets with no priority assigned '''
     Priority = 0
-    for vlanID, UDPdstport in vlanID_to_UDPdstport.items():
+    UDPdstport = 3002
+    for VLAN_ID in {2, 3}:
         for PacketLength in {100, 500, 1000}:
-            generate_flow(PacketLength, vlanID, UDPdstport, Priority)
+            PcapFileName = 'vlan_' + str(VLAN_ID) + 'udpDstport_'
+            PcapFileName = 'vlan_' + str(VLAN_ID) + '_udpDstport_' + str(UDPdstport) + '_packetsize_' + str(PacketLength) + 'B_NoPrio_test4.pcap'
+            make(PacketLength, VLAN_ID, Priority, PcapFileName)
 
-    # ''' Create packets with priority assigned '''
-    # Priority = 0
-    # VLAN_ID = 2
-    # for PacketLength in {100, 500, 1000}:
-    #     PcapFileName='VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test5.pcap'
-    #     make(PacketLength, VLAN_ID, Priority, PcapFileName)
-    #
-    # for PacketLength in {1000}:
-    #     PcapFileName='iperf_' + str(UDPdstport) + 'VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test6.pcap'
-    #     make(PacketLength, VLAN_ID, Priority, UDPdstport, PcapFileName)
-    #
-    #
-    # Priority = 1
-    # VLAN_ID = 3
-    # for PacketLength in {100, 500, 1000}:
-    #     PcapFileName='VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test5.pcap'
-    #     make(PacketLength, VLAN_ID, Priority, PcapFileName)
+    ''' Create packets with priority assigned '''
+    Priority = 0
+    VLAN_ID = 2
+    for PacketLength in {100, 500, 1000}:
+        PcapFileName='VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test5.pcap'
+        make(PacketLength, VLAN_ID, Priority, PcapFileName)
+
+    for PacketLength in {1000}:
+        PcapFileName='iperf_' + str(UDPdstport) + 'VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test6.pcap'
+        make(PacketLength, VLAN_ID, Priority, UDPdstport, PcapFileName)
+
+
+    Priority = 1
+    VLAN_ID = 3
+    for PacketLength in {100, 500, 1000}:
+        PcapFileName='VLAN_' + str(VLAN_ID) + '_packets_Size_' + str(PacketLength) + 'B_test5.pcap'
+        make(PacketLength, VLAN_ID, Priority, PcapFileName)
 
 
 if __name__ == '__main__':

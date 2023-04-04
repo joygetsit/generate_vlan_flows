@@ -23,8 +23,9 @@ from scapy.utils import PcapWriter
 # from scapy.all import *
 import time
 
-dstmac = '00:00:00:00:00:00'  # '00:1b:21:c2:54:42'
-Interface = 'lo'  # 'enp1s0np0', 'enp1s0f0'
+dstmac = '00:1b:21:c2:54:42'
+# Interface = 'enp1s0f0'
+Interface = 'enp1s0np0'
 vlanID_to_UDPdstport = {
     '2': '3002',
     '3': '3003'
@@ -51,18 +52,15 @@ def get_if(interface):
     return iface
 
 
-def generate_flow(PacketLength, vlanID, UDPdstport, Priority):
+def make(PacketLength, vlanID, UDPdstport, Priority, PcapFileName):
     iface = get_if(Interface)
-    PcapFileName = 'Traffic_Flow_vlan(' + str(vlanID) + \
-                   ')_packetsize(' + str(PacketLength) + 'B)_NoPriority_test8.pcap'
 
+    writetoPcap = PcapWriter(PcapFileName)  # opened file to write
     # PacketLength = 935 + 46 headers + 24 data = 1000 bytes
     payload_size = PacketLength - 73
     payload = ""
     while len(payload) < payload_size:
         payload += "test "
-
-    writetoPcap = PcapWriter(PcapFileName)  # opened file to write
 
     for PacketIP_lastoctet in range(10, 11):
         for PacketSequenceNo in range(20):
@@ -94,7 +92,9 @@ def main():
     Priority = 0
     for vlanID, UDPdstport in vlanID_to_UDPdstport.items():
         for PacketLength in {100, 500, 1000}:
-            generate_flow(PacketLength, vlanID, UDPdstport, Priority)
+            PcapFileName = 'vlan(' + str(vlanID) + ')_udpDstport(' + str(UDPdstport) +\
+                           ')_packetsize(' + str(PacketLength) + 'B)_NoPriority_test7.pcap'
+            make(PacketLength, vlanID, UDPdstport, Priority, PcapFileName)
 
     # ''' Create packets with priority assigned '''
     # Priority = 0
