@@ -3,8 +3,8 @@ A CLI-based packet flow generator written in Python using the Scapy module. Gene
 
 ![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)
 
-# Installation
-Step 1: Modify python script and provide a list of vlan ID, packet size
-Step 2: Run with ./'filename'.py
+## Installation
+Step 1: Modify python script and provide a list of vlan ID, packet size  
+Step 2: Run with ./filename.py
 
 Separate PCAP files are generated for each combination. These pcap files can be used with network tools like tcpreplay to transmit packet flows.
